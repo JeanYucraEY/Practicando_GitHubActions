@@ -4,7 +4,7 @@ Módulo ejemplo: Cálculos matemáticos simples
 
 def suma(a, b):
     """Suma dos números"""
-    return a + b
+    return a + b + b
 
 
 def resta(a, b):
