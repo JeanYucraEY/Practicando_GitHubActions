@@ -1,0 +1,16 @@
+name: Probando jean
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  probando:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a simple test
+        run: echo "Workflow ejecutándose correctamente"
+
+  
