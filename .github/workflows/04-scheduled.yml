@@ -1,13 +1,35 @@
+# ========================================
+# WORKFLOW #4: SCHEDULED - TAREAS PROGRAMADAS
+# ========================================
+# Ejecuta tareas de mantenimiento automáticamente en un horario específico.
+# Conceptos: schedule, cron syntax, automated tasks.
+
 name: Scheduled Workflow
 
-# Ejecutar en un horario específico (cron)
-# Formato: minuto hora día mes día_semana
+# TRIGGERS: Horario programado (cron) y ejecución manual
+# Información de CRON:
+#   Formato: minuto | hora | día_mes | mes | día_semana
+#   Rango:   0-59  | 0-23 |  1-31   | 1-12|   0-6 (0=domingo)
+#   Sin límite: * (cualquier valor)
 on:
-  # Ejecutar diariamente a las 10:00 UTC
+  # 'schedule:' ejecuta según una expresión cron
   schedule:
+    # Ejecutar DIARIAMENTE a las 10:00 UTC
+    # Explicación del cron '0 10 * * *':
+    #   0     = minuto 0 (en punto)
+    #   10    = hora 10 (10 AM UTC)
+    #   *     = cada día del mes
+    #   *     = cada mes
+    #   *     = cada día de la semana
+    # NOTA: UTC puede no ser tu zona horaria. Ajusta según necesites.
     - cron: '0 10 * * *'
+    # Más ejemplos de cron:
+    # '0 0 * * *'    = Diariamente a medianoche
+    # '0 */6 * * *'  = Cada 6 horas
+    # '30 2 * * 1-5' = Lunes a viernes a las 2:30 AM
+    # '0 0 1 * *'    = Primer día de cada mes a medianoche
   
-  # Permitir ejecución manual
+  # También permite ejecutar manualmente desde GitHub UI
   workflow_dispatch:
 
 jobs:
@@ -15,23 +37,47 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Descargar el código del repositorio
       - uses: actions/checkout@v4
       
+      # Paso 2: Mostrar que la tarea programada se ejecutó
       - name: Run scheduled task
         run: |
+          # Mensaje indicando que comenzó
           echo "⏰ Ejecutando tarea programada..."
+          # Mostrar fecha y hora actual con el comando 'date'
+          # Útil para verificar cuándo se ejecutó exactamente
           echo "Fecha y hora: $(date)"
+          # Mostrar la zona horaria del runner
+          # $TZ = variable de entorno con la zona horaria
           echo "Zona horaria: $TZ"
       
+      # Paso 3: Verificar estado del repositorio
       - name: Check repository status
         run: |
           echo "📊 Estado del repositorio:"
+          # Obtener el hash del último commit
+          # git log -1 = mostrar último commit
+          # --format=%H = mostrar solo el hash
           echo "Último commit: $(git log -1 --format=%H)"
+          # Mostrar el autor del último commit
+          # --format=%an = mostrar autor (author name)
           echo "Autor: $(git log -1 --format=%an)"
+          # Mostrar el mensaje del último commit
+          # --format=%s = mostrar subject (message line)
           echo "Mensaje: $(git log -1 --format=%s)"
       
+      # Paso 4: Ejecutar tareas de mantenimiento
       - name: Run maintenance tasks
         run: |
           echo "🛠️ Ejecutando tareas de mantenimiento..."
-          # Aquí podrías agregar limpieza de archivos, análisis, reportes, etc.
+          # AQUÍ PUEDES AGREGAR:
+          # - Limpiar archivos temporales
+          # - Generar reportes
+          # - Hacer backups
+          # - Actualizar dependencias
+          # - Enviar reportes por email/Slack
+          # - Analizar métricas del repositorio
+          # Ejemplo: rm -rf temp/  (eliminar carpeta temp)
+          # Ejemplo: tar -czf backup.tar.gz src/ (hacer backup)
           echo "Mantenimiento completado"

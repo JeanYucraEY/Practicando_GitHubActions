@@ -1,9 +1,21 @@
+# ========================================
+# WORKFLOW #5: PULL REQUEST - CODE REVIEW AUTOMÁTICO
+# ========================================
+# Se ejecuta automáticamente cuando se abre o actualiza un PR.
+# Analiza cambios y agrega comentarios automáticos.
+# Conceptos: PR events, git diff, GitHub API, github-script.
+
 name: Pull Request Workflow
 
+# TRIGGERS: Solo eventos de Pull Request
 on:
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened]
+    branches: [ main ]  # Solo PRs contra main
+    # Types especifica qué tipos de eventos PR ejecutan este workflow
+    types:
+      - opened      # Cuando se abre un nuevo PR
+      - synchronize # Cuando se agregan nuevos commits al PR
+      - reopened    # Cuando se reabre un PR que estaba cerrado
 
 jobs:
   review:
@@ -11,44 +23,75 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Descargar el código
       - uses: actions/checkout@v4
         with:
+          # fetch-depth: 0 = descargar TODO el historial de commits (no solo el último)
+          # Necesario para poder comparar main con la rama del PR
           fetch-depth: 0
       
+      # Paso 2: Mostrar información del Pull Request
       - name: Get PR information
         run: |
           echo "📝 Información del Pull Request:"
+          # github.event.pull_request = objeto con información del PR
+          # .number = número del PR (ej: #42)
           echo "PR Number: ${{ github.event.pull_request.number }}"
+          # .title = título del PR
           echo "Título: ${{ github.event.pull_request.title }}"
+          # .user.login = nombre de usuario del autor
           echo "Autor: ${{ github.event.pull_request.user.login }}"
+          # .body = descripción/cuerpo del PR
           echo "Descripción: ${{ github.event.pull_request.body }}"
       
+      # Paso 3: Mostrar qué archivos cambiaron
       - name: Check file changes
         run: |
           echo "📂 Archivos modificados:"
+          # git diff = comparar el estado de dos versiones
+          # origin/main...HEAD = comparar main con el último commit del PR
+          # --name-only = mostrar solo los nombres de archivos (no el contenido)
           git diff --name-only origin/main...HEAD
           echo ""
           echo "📊 Estadísticas de cambios:"
+          # --stat = mostrar estadísticas (líneas sumadas/eliminadas)
           git diff --stat origin/main...HEAD
       
+      # Paso 4: Validar calidad del código
       - name: Lint changes
         run: |
           echo "🔍 Verificando cambios..."
           echo "Búsqueda de patrones problemáticos..."
+          # Buscar comentarios TODO/FIXME/XXX en los cambios
+          # grep -E = usar expresión regular extendida
+          # (TODO|FIXME|XXX) = buscar cualquiera de estos patrones
           if git diff origin/main...HEAD | grep -E '(TODO|FIXME|XXX)'; then
+            # Si encuentra coincidencias, mostrar advertencia
             echo "⚠️ Se encontraron comentarios TODO/FIXME"
           else
+            # Si no encuentra, mostrar que está limpio
             echo "✅ No se encontraron comentarios TODO/FIXME"
           fi
       
+      # Paso 5: Agregar comentario automático al PR
       - name: Add PR comment
+        # if: always() = ejecutar SIEMPRE, aunque haya errores anteriores
         if: always()
+        # actions/github-script = acción para usar GitHub API desde JavaScript/Node
         uses: actions/github-script@v7
         with:
+          # script = código JavaScript que accede a la GitHub API
           script: |
+            # github.rest.issues.createComment = función para crear comentario
             github.rest.issues.createComment({
+              # issue_number = número del PR/issue
+              # context.issue.number = obtenido del contexto del evento
               issue_number: context.issue.number,
+              # owner = propietario del repositorio
               owner: context.repo.owner,
+              # repo = nombre del repositorio
               repo: context.repo.repo,
+              # body = texto del comentario
+              # \n = salto de línea
               body: '✅ Workflow de revisión completado\n\n*Este comentario fue generado automáticamente por GitHub Actions*'
             })

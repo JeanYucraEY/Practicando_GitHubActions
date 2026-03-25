@@ -1,83 +1,130 @@
+# ========================================
+# WORKFLOW #3: MULTI-JOB - DEPEDENCIAS Y ARTEFACTOS
+# ========================================
+# Demuestra cómo múltiples jobs pueden ejecutarse en secuencia.
+# Conceptos: needs (dependencias), artefactos, condicionales, matriz de status.
+# 
+# Flujo de ejecución:
+# BUILD (1) → TEST (2, espera BUILD) → DEPLOY (3, espera TEST) → NOTIFY (4, siempre)
+
 name: Multi-Job Workflow
 
+# TRIGGERS: Solo main y ejecución manual
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  # Job 1: Build
+  # ========== JOB 1: BUILD ==========
+  # Este es el primer job que se ejecuta
   build:
     name: Build Application
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Descargar código
       - uses: actions/checkout@v4
       
+      # Paso 2: Compilar la aplicación (simulado)
       - name: Compile code
         run: |
+          # Mensaje visual que dice que está compilando
           echo "🔨 Compilando la aplicación..."
+          # Crear carpeta 'build' (mkdir = make directory)
+          # -p = crear carpetas padre si no existen
           mkdir -p build
+          # Crear archivo de salida en la carpeta build
+          # > = redirigir output a archivo (overwrite)
           echo "Aplicación compilada exitosamente" > build/app.txt
       
+      # Paso 3: Guardar archivo como artefacto
+      # Los artefactos son archivos que se guardan para usarlos en otros jobs
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3  # Acción para guardar archivos
         with:
+          # Nombre identificador del artefacto (cualquier nombre)
           name: build-artifact
+          # Ruta de archivos/carpetas a guardar
           path: build/
-
-  # Job 2: Test (depende de build)
+  
+  # ========== JOB 2: TEST ==========
+  # Este job se ejecuta DESPUÉS de build (cuando build termine exitosamente)
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    # 'needs: build' = ESTE JOB DEPENDE DE BUILD
+    # No comenzará hasta que build termine correctamente
     needs: build
     
     steps:
       - uses: actions/checkout@v4
       
+      # Paso 1: Descargar el artefacto que subió BUILD
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v3  # Acción para descargar archivos
         with:
+          # Nombre del artefacto a descargar (DEBE coincidir con upload)
           name: build-artifact
       
+      # Paso 2: Ejecutar pruebas
       - name: Execute tests
         run: |
           echo "🧪 Ejecutando pruebas..."
+          # Listar los archivos descargados (verifica que se descargó correctamente)
           ls -la
-          echo "Pruebas completadas" 
-
-  # Job 3: Deploy (depende de test)
+          # Marcar que las pruebas completaron
+          echo "Pruebas completadas"
+  
+  # ========== JOB 3: DEPLOY ==========
+  # Este job se ejecuta DESPUÉS de test (cuando test termine exitosamente)
   deploy:
     name: Deploy Application
     runs-on: ubuntu-latest
+    # 'needs: test' = DEPENDE DE TEST
+    # No ejecutará hasta que test termine correctamente
     needs: test
-    # Solo ejecutar en main
+    # CONDICIONAL: Solo ejecutar si estamos en la rama main
+    # github.ref = rama sobre la que se ejecuta (ej: refs/heads/main)
     if: github.ref == 'refs/heads/main'
     
     steps:
       - uses: actions/checkout@v4
       
+      # Opcional: descargar el artefacto de nuevo (para verificar)
       - name: Download test artifact
         uses: actions/download-artifact@v3
         with:
           name: build-artifact
       
+      # Paso 1: Desplegar a producción
       - name: Deploy to production
         run: |
           echo "🚀 Desplegando la aplicación..."
+          # date = comando que muestra la fecha/hora actual
           echo "Despliegue completado en $(date)"
-
-  # Job 4: Notificación final
+  
+  # ========== JOB 4: NOTIFY ==========
+  # Este job SIEMPRE se ejecuta al final, sin importar si otros fallaron
   notify:
     name: Send Notification
     runs-on: ubuntu-latest
+    # 'needs: [lista]' = DEPENDE DE MÚLTIPLES JOBS
+    # Espera a que TODOS terminen (éxito O fallo)
     needs: [build, test, deploy]
+    # 'if: always()' = ejecutar SIEMPRE
+    # Incluso si build, test o deploy fallaron
+    # Esto asegura que SIEMPRE se envía la notificación de status
     if: always()
     
     steps:
+      # Paso 1: Verificar status de todos los jobs anteriores
       - name: Check workflow status
         run: |
           echo "✅ Workflow completado"
+          # Acceder al resultado de jobs previos con: needs.NOMBRE.result
+          # Valores posibles: success, failure, skipped, cancelled
           echo "Build Status: ${{ needs.build.result }}"
           echo "Test Status: ${{ needs.test.result }}"
           echo "Deploy Status: ${{ needs.deploy.result }}"
+          # Aquí podrías enviar un email, mensaje a Slack, etc.

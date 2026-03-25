@@ -1,5 +1,18 @@
+# ========================================
+# WORKFLOW #7: CODE QUALITY - ANÁLISIS DE CÓDIGO
+# ========================================
+# Ejecuta herramientas de análisis de calidad automáticamente.
+# Conceptos: multiple linters, code formatters, type checking.
+#
+# Herramientas:
+#   - Black: Formateador automático de Python
+#   - Flake8: Valida estilo PEP8
+#   - Pylint: Análisis estático profundo
+#   - MyPy: Verificación de tipos (type hints)
+
 name: Code Quality & Linting
 
+# TRIGGERS: Push/PR and manual execution
 on:
   push:
     branches: [ main, develop ]
@@ -13,41 +26,88 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # Paso 1: Descargar código
       - uses: actions/checkout@v4
       
+      # Paso 2: Instalar Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.11'  # Usar Python 3.11
       
+      # Paso 3: Instalar herramientas de calidad de código
       - name: Install dependencies
         run: |
+          # Actualizar el gestor de paquetes pip
           python -m pip install --upgrade pip
+          # Instalar las 4 herramientas de análisis
+          # pylint = análisis estático profundo
+          # black = formateador automático
+          # flake8 = validador de estilo PEP8
+          # mypy = verificador de tipos (type hints)
           pip install pylint black flake8 mypy
       
+      # Paso 4: Ejecutar Black (formateador)
       - name: Run Black (formatter check)
         run: |
           echo "🎨 Verificando formato con Black..."
+          # black --check = verificar sin hacer cambios
+          # src/ tests/ = carpetas a verificar
+          # || true = continuar incluso si hay errores
+          # (|| true hace que el workflow no falle)
           black --check src/ tests/ || true
+          # Mensaje informativo
           echo "Nota: ejecuta 'black .' localmente para arreglarlo"
       
+      # Paso 5: Ejecutar Flake8 (validador de estilo)
       - name: Run Flake8 (linter)
         run: |
           echo "🔍 Ejecutando Flake8..."
+          # flake8 = ejecutar validador
+          # --count = mostrar número total de errores
+          # --select=E9,F63,F7,F82 = solo estos códigos de error
+          #   E9 = errores de sintaxis
+          #   F63 = f-string con variable inválida
+          #   F7 = errores de sintaxis en def
+          #   F82 = variable indefinida
+          # --show-source = mostrar la línea del error
+          # --statistics = mostrar resumen de errores por tipo
+          # || true = no fallar el workflow
           flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
       
+      # Paso 6: Ejecutar Pylint (análisis profundo)
       - name: Run Pylint
         run: |
           echo "📋 Ejecutando Pylint..."
+          # pylint = análisis estático completo
+          # --fail-under=7.0 = fallar si score < 7.0
+          # --exit-zero = pero no fallar el workflow (exit code 0)
+          # La nota: Este es más estricto que Flake8
           pylint src/ --fail-under=7.0 --exit-zero || true
       
+      # Paso 7: Ejecutar MyPy (verificador de tipos)
       - name: Run MyPy (type checking)
         run: |
           echo "🔬 Verificando tipos con MyPy..."
+          # mypy = verificador de type hints
+          # Valida que variables tengan tipos correctos
+          # --ignore-missing-imports = no fallar por imports sin tipos
+          # || true = no fallar si hay errores de tipos
           mypy src/ --ignore-missing-imports || true
       
+      # Paso 8: Generar reporte resumen
       - name: Generate code quality report
         run: |
           echo "📊 Resumen de Calidad del Código:"
           echo "================================"
+          # Marcar como completado
           echo "✅ Análisis completados"
+          echo ""
+          echo "NOTAS:"
+          echo "- Estos análisis son informativos"
+          echo "- No fallan el workflow (|| true)"
+          echo "- Ejecuta localmente antes de hacer push:"
+          echo "  → black ."
+          echo "  → flake8 src/ tests/"
+          echo "  → pylint src/"
+          echo "  → mypy src/"

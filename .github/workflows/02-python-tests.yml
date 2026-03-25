@@ -1,5 +1,12 @@
+# ========================================
+# WORKFLOW #2: PYTHON TESTS - TESTING
+# ========================================
+# Demuestra cómo ejecutar pruebas en múltiples versiones de Python.
+# Conceptos: matrix strategy, actions, dependencies, coverage reports.
+
 name: Python Tests
 
+# TRIGGERS: Se ejecuta en push/PR y manualmente
 on:
   push:
     branches: [ main, develop ]
@@ -10,32 +17,62 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    # STRATEGY - MATRIX: Ejecutar el job múltiples veces con diferentes parámetros
+    # Crea 3 instancias paralelas del job, una para cada versión de Python
     strategy:
       matrix:
+        # Cada valor crea un job separado
+        # Accedible mediante: ${{ matrix.python-version }}
         python-version: ['3.9', '3.10', '3.11']
     
     steps:
+      # PASO 1: Descargar código del repositorio
       - uses: actions/checkout@v4
       
+      # PASO 2: Configurar Python en el runner
+      # Instala la versión de Python especificada en la matriz
+      # ${{ matrix.python-version }} es reemplazado por: 3.9, 3.10 o 3.11
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v4  # Acción predefinida de GitHub
         with:
+          # 'with:' especifica parámetros de entrada para la acción
           python-version: ${{ matrix.python-version }}
       
+      # PASO 3: Instalar dependencias del proyecto
       - name: Install dependencies
         run: |
+          # Actualizar pip a version más reciente (gestor de paquetes Python)
           python -m pip install --upgrade pip
+          # Instalar las herramientas de testing que necesitamos
+          # pytest = framework de testing
+          # pytest-cov = plugin para generar reportes de cobertura
           pip install pytest pytest-cov
       
+      # PASO 4: Ejecutar las pruebas
       - name: Run tests
+        # pytest = ejecuta todas las pruebas en la carpeta tests/
+        # -v = verbose (muestra detalles de cada prueba)
         run: pytest tests/ -v
       
+      # PASO 5: Generar reporte de cobertura
+      # Muestra qué porcentaje del código está cubierto por pruebas
       - name: Generate coverage report
-        run: pytest tests/ --cov=src --cov-report=xml
+        run: |
+          # Ejecutar pytest con opciones de cobertura
+          # --cov=src = analizar cobertura del directorio src/
+          # --cov-report=xml = generar reporte en formato XML para codecov
+          pytest tests/ --cov=src --cov-report=xml
       
+      # PASO 6: Subir reporte de cobertura a Codecov
+      # Codecov.io es un servicio que gestiona reportes de cobertura
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v3  # Acción para subir a Codecov
+        # 'if: always()' ejecuta INDEPENDIENTEMENTE del resultado anterior
+        # always() = siempre ejecutar (aunque los tests fallen)
         if: always()
         with:
+          # Archivo XML generado en PASO 5
           files: ./coverage.xml
+          # No fallar el workflow si hay errores al subir
           fail_ci_if_error: false

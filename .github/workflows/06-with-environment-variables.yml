@@ -1,22 +1,45 @@
+# ========================================
+# WORKFLOW #6: ENVIRONMENT VARIABLES - VARIABLES Y SECRETS
+# ========================================
+# Demuestra cómo usar variables de entorno en diferentes niveles.
+# Conceptos: env (global/job/step), inputs, context variables, secrets.
+#
+# JERARQUÍA DE VARIABLES:
+#   1. STEP level (solo en ese step)
+#   2. JOB level (en todos los steps del job)
+#   3. WORKFLOW level (global a todos los jobs)
+#   4. CONTEXT variables (variables de GitHub)
+
 name: Workflow with Environment Variables
 
+# TRIGGERS: Push a main e inputs manuales
 on:
   push:
     branches: [ main ]
+  # workflow_dispatch permite entrada de parámetros por el usuario
   workflow_dispatch:
+    # inputs = formulario que verá el usuario al ejecutar manualmente
     inputs:
+      # Primer input: ambiente
       environment:
+        # Descripción mostrada al usuario
         description: 'Selecciona el ambiente'
+        # required = es obligatorio completar este campo?
         required: true
+        # Valor por defecto si no especifica nada
         default: 'development'
+        # type: choice = mostrar un dropdown (no texto libre)
         type: choice
+        # Opciones disponibles en el dropdown
         options:
           - development
           - staging
           - production
+      
+      # Segundo input: nivel de logs
       log_level:
         description: 'Nivel de logs'
-        required: false
+        required: false  # Este es opcional
         default: 'info'
         type: choice
         options:
@@ -25,8 +48,10 @@ on:
           - warning
           - error
 
+# VARIABLES GLOBALES DEL WORKFLOW
+# Disponibles en TODOS los jobs y steps
 env:
-  # Variables globales para todo el workflow
+  # Nombre arbitrario = valor
   GLOBAL_VAR: "Soy una variable global"
   PROJECT_NAME: "Practicando GitHub Actions"
 
@@ -35,44 +60,74 @@ jobs:
     name: Deploy with Env Variables
     runs-on: ubuntu-latest
     
-    # Variables de ambiente específicas del job
+    # VARIABLES DEL JOB
+    # Disponibles en todos los steps de este job
     env:
+      # Variable local del job
       JOB_ENV: "Soy variable del job"
+      # Variable obtenida del input (con valor por defecto)
+      # github.event.inputs.NOM = acceder a inputs de workflow_dispatch
+      # || = operador "o" (si no viene, usar valor por defecto)
       ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
       LOG_LEVEL: ${{ github.event.inputs.log_level || 'info' }}
     
     steps:
+      # Paso 1: Descargar código
       - uses: actions/checkout@v4
       
+      # Paso 2: Mostrar variables globales y del job
       - name: Show all variables
         run: |
+          # Las variables se acceden con: $NOMBRE_VARIABLE
           echo "=== Variables de Entorno ==="
+          # Variable global del workflow
           echo "Global var: $GLOBAL_VAR"
+          # Variable global del workflow
           echo "Job env: $JOB_ENV"
+          # Variable del job, obtenida de inputs
           echo "Environment: $ENVIRONMENT"
+          # Variable del job, obtenida de inputs
           echo "Log Level: $LOG_LEVEL"
+          # Variable global del workflow
           echo "Project: $PROJECT_NAME"
       
+      # Paso 3: Usar variables específicas del step (local)
       - name: Step with local variables
+        # VARIABLES DEL STEP
+        # Solo disponibles en este step específico
         env:
+          # Variable solo en este step
           STEP_VAR: "Soy variable del step"
+          # CONTEXT VARIABLES = información del GitHub Actions
+          # github.ref_name = nombre de la rama actual
           BRANCH: ${{ github.ref_name }}
+          # github.workflow = nombre de este workflow
           WORKFLOW: ${{ github.workflow }}
+          # github.run_id = ID único de esta ejecución del workflow
           RUN_ID: ${{ github.run_id }}
+          # github.run_number = número secuencial de ejecuciones
           RUN_NUMBER: ${{ github.run_number }}
         run: |
           echo "=== Variables del Paso ==="
+          # Variable solo disponible en este step
           echo "Step variable: $STEP_VAR"
+          # Variables de contexto de GitHub
           echo "Rama: $BRANCH"
           echo "Workflow: $WORKFLOW"
           echo "Run ID: $RUN_ID"
           echo "Run Number: $RUN_NUMBER"
       
+      # Paso 4: Simular uso de secretos (en producción, aquí irían tus credenciales)
       - name: Use secrets simulation
         env:
-          # En producción usarías: ${{ secrets.API_KEY }}
+          # En PRODUCCIÓN usarías: ${{ secrets.API_KEY }}
+          # secrets.NOMBRE = acceder a secretos configurados en Settings
+          # || 'demo_key_123' = si no existe el secret, usar demo
           API_KEY: ${{ secrets.API_KEY || 'demo_key_123' }}
         run: |
+          # ${#VARIABLE} = longitud de la variable (número de caracteres)
+          # Mostrar esto es SEGURO (no revela el contenido)
           echo "API Key disponible: ${#API_KEY} caracteres"
-          # Nunca imprimas secretos en los logs!
+          # ⚠️ NUNCA HAGAS: echo "Key: $API_KEY"
+          # Los logs son públicos - ¡nunca imprimas secretos!
           echo "Conectando a API..."

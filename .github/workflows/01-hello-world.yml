@@ -1,36 +1,66 @@
+# ========================================
+# WORKFLOW #1: HELLO WORLD - BÁSICO
+# ========================================
+# Este es el workflow más simple para aprender los conceptos básicos.
+# Demuestra: triggers, jobs, steps, y condicionales.
+
 name: Hello World Workflow
 
-# Cuándo se ejecuta este workflow
+# SECCIÓN: TRIGGERS (CUÁNDO SE EJECUTA)
+# Define los eventos que disparan este workflow
 on:
+  # Se ejecuta cuando hay un push a estas ramas
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop ]  # Ramas que activan el workflow
+  
+  # Se ejecuta cuando se abre/actualiza un PR contra main
   pull_request:
-    branches: [ main ]
-  # Permitir ejecución manual desde la pestaña "Actions"
+    branches: [ main ]  # Solo PRs que apuntan a main
+  
+  # Permite ejecutar manualmente desde GitHub → Actions tab
+  # Útil para testing sin hacer commit
   workflow_dispatch:
 
+# SECCIÓN: JOBS (TAREAS PRINCIPALES)
+# Define las tareas que ejecutará el workflow
 jobs:
-  # Primer job: Saludar
+  # Nombre único del job (puedes tener múltiples jobs)
   greet:
+    # Especifica el entorno de ejecución
+    # ubuntu-latest = máquina Linux más reciente disponible
+    # Otras opciones: windows-latest, macos-latest
     runs-on: ubuntu-latest
     
+    # STEPS: Pasos ejecutados en orden dentro de este job
     steps:
-      # Descargar el código del repositorio
+      # PASO 1: Descargar el código del repositorio
+      # Esta es la acción más importante - sin ella no tienes acceso al código
+      # @v4 = versión 4 de esta acción (asegura estabilidad)
       - uses: actions/checkout@v4
       
-      # Ejecutar un comando simple
+      # PASO 2: Imprimir un saludo simple
       - name: Say Hello
+        # 'run:' ejecuta comandos bash en la terminal
+        # echo = comando para imprimir texto
         run: echo "¡Hola! Este es mi primer workflow de GitHub Actions"
       
-      # Mostrar información del sistema
+      # PASO 3: Mostrar información del sistema
+      # El pipe '|' permite múltiples líneas de comandos
       - name: Show System Info
         run: |
+          # Muestra el sistema operativo
           echo "Sistema operativo: $(uname -s)"
+          # Muestra versión de bash
           echo "Versión de bash: $BASH_VERSION"
+          # Muestra el directorio actual de trabajo
           echo "Directorio actual: $(pwd)"
+          # Lista todos los archivos con detalles (long format)
           ls -la
       
-      # Tarea con condicional
+      # PASO 4: Ejecutar un comando SOLO SI el evento fue un Pull Request
+      # 'if:' es un condicional que valida una expresión
+      # github.event_name = tipo de evento que disparó el workflow
       - name: Check if this is a PR
         if: github.event_name == 'pull_request'
+        # Este comando solo se ejecuta si la condición es verdadera
         run: echo "Este workflow se ejecutó desde un Pull Request"
