@@ -1,0 +1,54 @@
+name: Pull Request Workflow
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    name: Code Review
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get PR information
+        run: |
+          echo "📝 Información del Pull Request:"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Título: ${{ github.event.pull_request.title }}"
+          echo "Autor: ${{ github.event.pull_request.user.login }}"
+          echo "Descripción: ${{ github.event.pull_request.body }}"
+      
+      - name: Check file changes
+        run: |
+          echo "📂 Archivos modificados:"
+          git diff --name-only origin/main...HEAD
+          echo ""
+          echo "📊 Estadísticas de cambios:"
+          git diff --stat origin/main...HEAD
+      
+      - name: Lint changes
+        run: |
+          echo "🔍 Verificando cambios..."
+          echo "Búsqueda de patrones problemáticos..."
+          if git diff origin/main...HEAD | grep -E '(TODO|FIXME|XXX)'; then
+            echo "⚠️ Se encontraron comentarios TODO/FIXME"
+          else
+            echo "✅ No se encontraron comentarios TODO/FIXME"
+          fi
+      
+      - name: Add PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Workflow de revisión completado\n\n*Este comentario fue generado automáticamente por GitHub Actions*'
+            })

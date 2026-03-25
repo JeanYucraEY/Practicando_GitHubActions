@@ -1,0 +1,78 @@
+name: Workflow with Environment Variables
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Selecciona el ambiente'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      log_level:
+        description: 'Nivel de logs'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - debug
+          - info
+          - warning
+          - error
+
+env:
+  # Variables globales para todo el workflow
+  GLOBAL_VAR: "Soy una variable global"
+  PROJECT_NAME: "Practicando GitHub Actions"
+
+jobs:
+  deploy:
+    name: Deploy with Env Variables
+    runs-on: ubuntu-latest
+    
+    # Variables de ambiente específicas del job
+    env:
+      JOB_ENV: "Soy variable del job"
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'development' }}
+      LOG_LEVEL: ${{ github.event.inputs.log_level || 'info' }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Show all variables
+        run: |
+          echo "=== Variables de Entorno ==="
+          echo "Global var: $GLOBAL_VAR"
+          echo "Job env: $JOB_ENV"
+          echo "Environment: $ENVIRONMENT"
+          echo "Log Level: $LOG_LEVEL"
+          echo "Project: $PROJECT_NAME"
+      
+      - name: Step with local variables
+        env:
+          STEP_VAR: "Soy variable del step"
+          BRANCH: ${{ github.ref_name }}
+          WORKFLOW: ${{ github.workflow }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          echo "=== Variables del Paso ==="
+          echo "Step variable: $STEP_VAR"
+          echo "Rama: $BRANCH"
+          echo "Workflow: $WORKFLOW"
+          echo "Run ID: $RUN_ID"
+          echo "Run Number: $RUN_NUMBER"
+      
+      - name: Use secrets simulation
+        env:
+          # En producción usarías: ${{ secrets.API_KEY }}
+          API_KEY: ${{ secrets.API_KEY || 'demo_key_123' }}
+        run: |
+          echo "API Key disponible: ${#API_KEY} caracteres"
+          # Nunca imprimas secretos en los logs!
+          echo "Conectando a API..."

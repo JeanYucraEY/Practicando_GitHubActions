@@ -1,0 +1,83 @@
+name: Multi-Job Workflow
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Build
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Compile code
+        run: |
+          echo "🔨 Compilando la aplicación..."
+          mkdir -p build
+          echo "Aplicación compilada exitosamente" > build/app.txt
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifact
+          path: build/
+
+  # Job 2: Test (depende de build)
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifact
+      
+      - name: Execute tests
+        run: |
+          echo "🧪 Ejecutando pruebas..."
+          ls -la
+          echo "Pruebas completadas" 
+
+  # Job 3: Deploy (depende de test)
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: test
+    # Solo ejecutar en main
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download test artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifact
+      
+      - name: Deploy to production
+        run: |
+          echo "🚀 Desplegando la aplicación..."
+          echo "Despliegue completado en $(date)"
+
+  # Job 4: Notificación final
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [build, test, deploy]
+    if: always()
+    
+    steps:
+      - name: Check workflow status
+        run: |
+          echo "✅ Workflow completado"
+          echo "Build Status: ${{ needs.build.result }}"
+          echo "Test Status: ${{ needs.test.result }}"
+          echo "Deploy Status: ${{ needs.deploy.result }}"

@@ -1,0 +1,36 @@
+name: Hello World Workflow
+
+# Cuándo se ejecuta este workflow
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  # Permitir ejecución manual desde la pestaña "Actions"
+  workflow_dispatch:
+
+jobs:
+  # Primer job: Saludar
+  greet:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Descargar el código del repositorio
+      - uses: actions/checkout@v4
+      
+      # Ejecutar un comando simple
+      - name: Say Hello
+        run: echo "¡Hola! Este es mi primer workflow de GitHub Actions"
+      
+      # Mostrar información del sistema
+      - name: Show System Info
+        run: |
+          echo "Sistema operativo: $(uname -s)"
+          echo "Versión de bash: $BASH_VERSION"
+          echo "Directorio actual: $(pwd)"
+          ls -la
+      
+      # Tarea con condicional
+      - name: Check if this is a PR
+        if: github.event_name == 'pull_request'
+        run: echo "Este workflow se ejecutó desde un Pull Request"
